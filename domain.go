@@ -682,10 +682,11 @@ func (do *Domain) GetCtxTranslations() map[string]map[string]*Translation {
 
 // SourceReference is a struct to hold source reference information
 type SourceReference struct {
-	path    string
-	line    int
-	context string
-	trans   *Translation
+	path       string
+	line       int
+	context    string
+	hasContext bool
+	trans      *Translation
 }
 
 func extractPathAndLine(ref string) (string, int) {
@@ -764,31 +765,29 @@ func (do *Domain) MarshalText() ([]byte, error) {
 		v := do.Headers[k]
 
 		for _, value := range v {
-			buf.WriteString("\n\"" + k + ": " + value + "\\n\"")
+			encoded := EscapeSpecialCharacters(k + ": " + value + "\n")
+			buf.WriteString("\n\"" + encoded + "\"")
 		}
 	}
 
 	// Just as with headers, output translations in consistent order (to minimise diffs between round-trips), with (first) source reference taking priority, followed by context and finally ID
 	references := make([]SourceReference, 0)
 	for name, ctx := range do.contextTranslations {
-		for id, trans := range ctx {
-			if id == "" {
-				continue
-			}
+		for _, trans := range ctx {
 			if len(trans.Refs) > 0 {
 				path, line := extractPathAndLine(trans.Refs[0])
 				references = append(references, SourceReference{
-					path,
-					line,
-					name,
-					trans,
+					path:       path,
+					line:       line,
+					context:    name,
+					hasContext: true,
+					trans:      trans,
 				})
 			} else {
 				references = append(references, SourceReference{
-					"",
-					0,
-					name,
-					trans,
+					context:    name,
+					hasContext: true,
+					trans:      trans,
 				})
 			}
 		}
@@ -802,17 +801,13 @@ func (do *Domain) MarshalText() ([]byte, error) {
 		if len(trans.Refs) > 0 {
 			path, line := extractPathAndLine(trans.Refs[0])
 			references = append(references, SourceReference{
-				path,
-				line,
-				"",
-				trans,
+				path:  path,
+				line:  line,
+				trans: trans,
 			})
 		} else {
 			references = append(references, SourceReference{
-				"",
-				0,
-				"",
-				trans,
+				trans: trans,
 			})
 		}
 	}
@@ -837,6 +832,9 @@ func (do *Domain) MarshalText() ([]byte, error) {
 		if references[i].context > references[j].context {
 			return false
 		}
+		if references[i].hasContext != references[j].hasContext {
+			return !references[i].hasContext
+		}
 		return references[i].trans.ID < references[j].trans.ID
 	})
 
@@ -848,7 +846,7 @@ func (do *Domain) MarshalText() ([]byte, error) {
 			buf.WriteByte(byte('\n'))
 		}
 
-		if ref.context == "" {
+		if !ref.hasContext {
 			buf.WriteString("\nmsgid \"" + EscapeSpecialCharacters(trans.ID) + "\"")
 		} else {
 			buf.WriteString("\nmsgctxt \"" + EscapeSpecialCharacters(ref.context) + "\"\nmsgid \"" + EscapeSpecialCharacters(trans.ID) + "\"")
@@ -883,14 +881,9 @@ func EscapeSpecialCharacters(s string) string {
 		switch s[i] {
 		case '\\':
 			escaped.WriteByte('\\')
-			// Preserve already-escaped quote sequences for compatibility.
-			if i+1 >= len(s) || s[i+1] != '"' {
-				escaped.WriteByte('\\')
-			}
+			escaped.WriteByte('\\')
 		case '"':
-			if i == 0 || s[i-1] != '\\' {
-				escaped.WriteByte('\\')
-			}
+			escaped.WriteByte('\\')
 			escaped.WriteByte('"')
 		default:
 			escaped.WriteByte(s[i])

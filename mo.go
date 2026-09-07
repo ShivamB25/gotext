@@ -251,8 +251,10 @@ func (mo *Mo) addTranslation(msgid, msgstr []byte) {
 	translation := NewTranslation()
 	var msgctxt []byte
 	var msgidPlural []byte
+	hasContext := false
 
 	if eotIndex := bytes.IndexByte(msgid, EotSeparator[0]); eotIndex >= 0 {
+		hasContext = true
 		msgctxt = msgid[:eotIndex]
 		msgid = msgid[eotIndex+len(EotSeparator):]
 	}
@@ -273,8 +275,8 @@ func (mo *Mo) addTranslation(msgid, msgstr []byte) {
 		i++
 	}
 
-	if len(msgctxt) > 0 {
-		// With context...
+	if hasContext {
+		// With context, including an explicitly empty context...
 		if _, ok := mo.domain.contextTranslations[string(msgctxt)]; !ok {
 			mo.domain.contextTranslations[string(msgctxt)] = make(map[string]*Translation)
 		}

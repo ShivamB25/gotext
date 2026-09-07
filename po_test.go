@@ -6,6 +6,7 @@
 package gotext
 
 import (
+	"encoding/binary"
 	"fmt"
 	"os"
 	"path"
@@ -974,6 +975,104 @@ msgstr[1] "two"
 	}
 	if got := translation.Trs[1]; got != "two" {
 		t.Fatalf("translation form 1 = %q, want %q", got, "two")
+	}
+}
+
+func TestPoParsePreservesExplicitEmptyContext(t *testing.T) {
+	po := NewPo()
+	po.Parse([]byte(`msgid ""
+msgstr "Language: en\n"
+
+msgid "same"
+msgstr "ordinary"
+
+msgctxt ""
+msgid "same"
+msgstr "contextual"
+
+msgctxt ""
+msgid ""
+msgstr "contextual empty ID"
+`))
+
+	if got := po.Get("same"); got != "ordinary" {
+		t.Errorf("ordinary translation = %q, want %q", got, "ordinary")
+	}
+	if got := po.GetC("same", ""); got != "contextual" {
+		t.Errorf("empty-context translation = %q, want %q", got, "contextual")
+	}
+	if got := po.GetC("", ""); got != "contextual empty ID" {
+		t.Errorf("empty-context empty-ID translation = %q, want %q", got, "contextual empty ID")
+	}
+	if got := po.Headers.Get("Language"); got != "en" {
+		t.Errorf("Language header = %q, want %q", got, "en")
+	}
+}
+
+func TestMoParsePreservesExplicitEmptyContext(t *testing.T) {
+	mo := NewMo()
+	mo.Parse(makeMoFixture(
+		binary.LittleEndian,
+		moFixtureEntry{msgid: []byte(""), msgstr: []byte("Language: en\n")},
+		moFixtureEntry{msgid: []byte("same"), msgstr: []byte("ordinary")},
+		moFixtureEntry{msgid: []byte("\x04same"), msgstr: []byte("contextual")},
+		moFixtureEntry{msgid: []byte{0x04}, msgstr: []byte("contextual empty ID")},
+	))
+
+	if got := mo.Get("same"); got != "ordinary" {
+		t.Errorf("ordinary translation = %q, want %q", got, "ordinary")
+	}
+	if got := mo.GetC("same", ""); got != "contextual" {
+		t.Errorf("empty-context translation = %q, want %q", got, "contextual")
+	}
+	if got := mo.GetC("", ""); got != "contextual empty ID" {
+		t.Errorf("empty-context empty-ID translation = %q, want %q", got, "contextual empty ID")
+	}
+	if got := mo.Headers.Get("Language"); got != "en" {
+		t.Errorf("Language header = %q, want %q", got, "en")
+	}
+}
+
+func TestPoParseGNUQuotedNumericEscapes(t *testing.T) {
+	po := NewPo()
+	po.Parse([]byte(`msgctxt "\x041"
+msgid "id"
+msgid_plural "plural"
+msgstr[0] "\x7"
+"\101"
+msgstr[1] "\7"
+
+msgid "octal"
+msgstr "\7"
+
+msgid "hex"
+msgstr "\x7"
+
+msgid "long hex"
+msgstr "\x041"
+`))
+
+	if got := po.GetDomain().contextTranslations["A"]["id"]; got == nil {
+		t.Fatal("expected contextual numeric-escape translation")
+	} else {
+		if got.PluralID != "plural" {
+			t.Errorf("plural ID = %q, want %q", got.PluralID, "plural")
+		}
+		if got.Trs[0] != "\aA" {
+			t.Errorf("plural form 0 = %q, want %q", got.Trs[0], "\aA")
+		}
+		if got.Trs[1] != "\a" {
+			t.Errorf("plural form 1 = %q, want %q", got.Trs[1], "\a")
+		}
+	}
+	if got := po.Get("octal"); got != "\a" {
+		t.Errorf("short octal escape = %q, want %q", got, "\a")
+	}
+	if got := po.Get("hex"); got != "\a" {
+		t.Errorf("short hex escape = %q, want %q", got, "\a")
+	}
+	if got := po.Get("long hex"); got != "A" {
+		t.Errorf("long hex escape = %q, want %q", got, "A")
 	}
 }
 

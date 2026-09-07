@@ -3,6 +3,7 @@ package gotext
 import (
 	"bytes"
 	"encoding/gob"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -454,15 +455,54 @@ func TestDomain_MarshalPluralEscapingAndOrder(t *testing.T) {
 		previous = position
 	}
 
-	for _, fragment := range []string{
-		`msgid "\"leading\" and embedded \"quote\" \\raw"`,
-		`"embedded \"quote\" and \"preserved with \\raw"`,
-		`msgstr[1] "already \"escaped"`,
-		`"with \"quote\" and \\raw`,
-	} {
-		if !strings.Contains(output, fragment) {
-			t.Errorf("MarshalText output missing escaped fragment %q:\n%s", fragment, output)
+	roundTrip := NewPo()
+	roundTrip.Parse(data)
+	got, ok := roundTrip.GetDomain().translations[trans.ID]
+	if !ok {
+		t.Fatalf("round-trip translation %q missing", trans.ID)
+	}
+	if got.PluralID != trans.PluralID {
+		t.Errorf("round-trip plural ID = %q, want %q", got.PluralID, trans.PluralID)
+	}
+	for index, want := range trans.Trs {
+		if got.Trs[index] != want {
+			t.Errorf("round-trip plural form %d = %q, want %q", index, got.Trs[index], want)
 		}
+	}
+}
+
+func TestDomain_MarshalPreservesEmptyContextAndHeaderEscapes(t *testing.T) {
+	po := NewPo()
+	po.GetDomain().Headers = HeaderMap{
+		"Last-Translator": {`A "B" \C`, "second"},
+		"x-custom":        {"value"},
+	}
+	po.Set("same", "ordinary")
+	po.SetC("same", "", "contextual")
+	po.SetC("", "", "contextual empty ID")
+	po.SetC(`context "id" \`, `ctx "quoted" \`, `contextual metadata`)
+
+	data, err := po.MarshalText()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	roundTrip := NewPo()
+	roundTrip.Parse(data)
+	if got := roundTrip.Get("same"); got != "ordinary" {
+		t.Errorf("ordinary translation = %q, want %q", got, "ordinary")
+	}
+	if got := roundTrip.GetC("same", ""); got != "contextual" {
+		t.Errorf("empty-context translation = %q, want %q", got, "contextual")
+	}
+	if got := roundTrip.GetC("", ""); got != "contextual empty ID" {
+		t.Errorf("empty-context empty-ID translation = %q, want %q", got, "contextual empty ID")
+	}
+	if got := roundTrip.GetC(`context "id" \`, `ctx "quoted" \`); got != "contextual metadata" {
+		t.Errorf("escaped context translation = %q, want %q", got, "contextual metadata")
+	}
+	if got, want := roundTrip.Headers.Values("Last-Translator"), []string{`A "B" \C`, "second"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("Last-Translator headers = %v, want %v", got, want)
 	}
 }
 
