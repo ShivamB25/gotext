@@ -145,7 +145,7 @@ func (l *Locale) findExtWithFS(dom, ext string) (fs.FS, string) {
 // a CC part of the ll_CC locale string.
 func (l *Locale) GetActualLanguage(dom string) string {
 	p, lang, filesystem := l.snapshotPathLanguageFS()
-	extensions := []string{"mo", "po"}
+	extensions := []string{"po", "mo"}
 	var fp string
 	for _, ext := range extensions {
 		// 'll' (or 'll_CC') exists, and it was specified as-is

@@ -120,6 +120,8 @@ fmt.Println(gotext.Get("Hello, world!"))
 
 If a file for the full locale code (e.g., `es_UY`) is missing, a file for the base language (e.g., `es`) is used instead. `GetActualLanguage` reports which language code the filesystem actually resolved. Files may live under an `LC_MESSAGES` subdirectory or directly under the language code — both layouts are supported.
 
+Language reporting follows the same PO-before-MO precedence as catalog loading. Package-level `IsTranslated*` checks accept both the configured locale code and its resolved base-language code. They also work with in-memory locales from `SetLocales` and lazily load nondefault domains, just like the corresponding getters.
+
 ### Domain Fallback
 
 Domain-level fallback follows the same idea: when a domain is missing for a given key, the message ID itself is returned, formatted with the provided variables.

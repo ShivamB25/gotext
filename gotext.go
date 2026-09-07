@@ -426,8 +426,11 @@ func IsTranslatedND(dom, str string, n int, langs ...string) bool {
 			if supportedLocale == nil {
 				continue
 			}
-			if lang != supportedLocale.GetActualLanguage(dom) {
+			if lang != supportedLocale.GetLanguage() && lang != supportedLocale.GetActualLanguage(dom) {
 				continue
+			}
+			if !supportedLocale.hasDomain(dom) {
+				supportedLocale.AddDomain(dom)
 			}
 			if supportedLocale.IsTranslatedND(dom, str, n) {
 				return true
@@ -471,8 +474,11 @@ func IsTranslatedNDC(dom, str string, n int, ctx string, langs ...string) bool {
 			if supportedLocale == nil {
 				continue
 			}
-			if lang != supportedLocale.GetActualLanguage(dom) {
+			if lang != supportedLocale.GetLanguage() && lang != supportedLocale.GetActualLanguage(dom) {
 				continue
+			}
+			if !supportedLocale.hasDomain(dom) {
+				supportedLocale.AddDomain(dom)
 			}
 			if supportedLocale.IsTranslatedNDC(dom, str, n, ctx) {
 				return true
