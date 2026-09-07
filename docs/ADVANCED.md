@@ -6,7 +6,7 @@ This guide covers the more advanced features of `gotext`: embedding translation 
 
 Instead of loading `.po`/`.mo` files from disk, you can read them from an in-memory filesystem.
 
-**`NewLocaleFS(lang string, filesystem fs.FS)`** creates a `Locale` whose translation files live at the root of the given filesystem:
+**`NewLocaleFS(lang string, filesystem fs.FS)`** creates a `Locale` whose translation files live at the root of the given filesystem. If embedded files are under a directory such as `locales/`, use `NewLocaleFSWithPath` with that prefix:
 
 ```go
 package main
@@ -22,7 +22,7 @@ import (
 var localeFS embed.FS
 
 func main() {
-    l := gotext.NewLocaleFS("en_US", localeFS)
+    l := gotext.NewLocaleFSWithPath("en_US", localeFS, "locales")
     l.AddDomain("default")
 
     fmt.Println(l.Get("Hello, world!"))
@@ -92,7 +92,7 @@ The serialized bytes are self-contained (they include all parsed domains and tra
 To use manually built `Locale` objects at the package level — for example, built from in-memory `Po` objects or from an `embed.FS` — replace the package configuration with `SetLocales`:
 
 ```go
-l := gotext.NewLocaleFS("de_DE", localeFS)
+l := gotext.NewLocaleFSWithPath("de_DE", localeFS, "locales")
 l.AddDomain("default")
 gotext.SetLocales([]*gotext.Locale{l})
 ```
@@ -150,7 +150,7 @@ l.AddTranslator("default", myCustomTranslator)
 fmt.Println(l.Get("Hello, world!"))
 ```
 
-The `AppendTranslator` interface extends `Translator` with `Append`/`AppendN`/`AppendC`/`AppendNC` buffer builders, used to stream serialized output.
+The `AppendTranslator` interface extends `Translator` with `Append`/`AppendN`/`AppendC`/`AppendNC` methods that append formatted translations to a byte slice.
 
 ### In-Memory PO Manipulation
 

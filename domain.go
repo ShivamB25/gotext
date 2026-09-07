@@ -64,9 +64,6 @@ func (m HeaderMap) Del(key string) {
 
 // Get value for key from HeaderMap
 func (m HeaderMap) Get(key string) string {
-	if m == nil {
-		return ""
-	}
 	v := m[key]
 	if len(v) == 0 {
 		return ""
@@ -81,9 +78,6 @@ func (m HeaderMap) Set(key, value string) {
 
 // Values returns all values for a given key from HeaderMap
 func (m HeaderMap) Values(key string) []string {
-	if m == nil {
-		return nil
-	}
 	return m[key]
 }
 
@@ -157,16 +151,7 @@ func cloneContextTranslations(contexts map[string]map[string]*Translation) map[s
 
 	owned := make(map[string]map[string]*Translation, len(contexts))
 	for context, translations := range contexts {
-		if translations == nil {
-			owned[context] = nil
-			continue
-		}
-
-		contextOwned := make(map[string]*Translation, len(translations))
-		for id, trans := range translations {
-			contextOwned[id] = cloneTranslation(trans)
-		}
-		owned[context] = contextOwned
+		owned[context] = cloneTranslations(translations)
 	}
 	return owned
 }
@@ -175,26 +160,14 @@ func (do *Domain) hasTranslation(id string) bool {
 	do.trMutex.RLock()
 	defer do.trMutex.RUnlock()
 
-	if do.translations == nil {
-		return false
-	}
-	trans, ok := do.translations[id]
-	return ok && trans != nil
+	return do.translations[id] != nil
 }
 
 func (do *Domain) hasContextTranslation(id, context string) bool {
 	do.trMutex.RLock()
 	defer do.trMutex.RUnlock()
 
-	if do.contextTranslations == nil {
-		return false
-	}
-	translations, ok := do.contextTranslations[context]
-	if !ok || translations == nil {
-		return false
-	}
-	trans, ok := translations[id]
-	return ok && trans != nil
+	return do.contextTranslations[context][id] != nil
 }
 
 // SetPluralResolver sets a custom plural resolver function
@@ -550,12 +523,14 @@ func (do *Domain) SetNC(id, plural, ctx string, n int, str string) {
 		} else {
 			trans = NewTranslation()
 			trans.ID = id
+			trans.PluralID = plural
 			trans.SetN(pluralForm, str)
 			context[id] = trans
 		}
 	} else {
 		trans := NewTranslation()
 		trans.ID = id
+		trans.PluralID = plural
 		trans.SetN(pluralForm, str)
 		do.contextTranslations[ctx] = map[string]*Translation{
 			id: trans,
@@ -904,7 +879,7 @@ func EscapeSpecialCharacters(s string) string {
 	var escaped strings.Builder
 	escaped.Grow(len(s))
 
-	for i := range s {
+	for i := range len(s) {
 		switch s[i] {
 		case '\\':
 			escaped.WriteByte('\\')

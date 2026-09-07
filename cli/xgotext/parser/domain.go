@@ -21,11 +21,7 @@ func (t *Translation) AddLocations(locations []string) {
 	if t == nil || len(locations) == 0 {
 		return
 	}
-	if t.SourceLocations == nil {
-		t.SourceLocations = append([]string(nil), locations...)
-	} else {
-		t.SourceLocations = append(t.SourceLocations, locations...)
-	}
+	t.SourceLocations = append(t.SourceLocations, locations...)
 }
 
 // Dump translation as string
@@ -119,9 +115,7 @@ func (m TranslationMap) Dump() string {
 	data := make([]string, 0, len(m))
 	for _, key := range keys {
 		if translation := m[key]; translation != nil {
-			if dump := translation.Dump(); dump != "" {
-				data = append(data, dump)
-			}
+			data = append(data, translation.Dump())
 		}
 	}
 	return strings.Join(data, "\n\n")
@@ -146,17 +140,17 @@ func (d *Domain) AddTranslation(translation *Translation) {
 	}
 
 	if translation.Context == "" {
-		if t, ok := d.Translations[translation.MsgID]; ok && t != nil {
+		if t := d.Translations[translation.MsgID]; t != nil {
 			t.AddLocations(translation.SourceLocations)
 		} else {
 			d.Translations[translation.MsgID] = translation
 		}
 	} else {
-		if _, ok := d.ContextTranslations[translation.Context]; !ok || d.ContextTranslations[translation.Context] == nil {
+		if d.ContextTranslations[translation.Context] == nil {
 			d.ContextTranslations[translation.Context] = make(TranslationMap)
 		}
 
-		if t, ok := d.ContextTranslations[translation.Context][translation.MsgID]; ok && t != nil {
+		if t := d.ContextTranslations[translation.Context][translation.MsgID]; t != nil {
 			t.AddLocations(translation.SourceLocations)
 		} else {
 			d.ContextTranslations[translation.Context][translation.MsgID] = translation
@@ -245,7 +239,7 @@ func (m *DomainMap) AddTranslation(domain string, translation *Translation) {
 		domain = m.Default
 	}
 
-	if _, ok := m.Domains[domain]; !ok || m.Domains[domain] == nil {
+	if m.Domains[domain] == nil {
 		m.Domains[domain] = new(Domain)
 	}
 	m.Domains[domain].AddTranslation(translation)

@@ -101,8 +101,6 @@ func (g *GoFile) InspectFile(n ast.Node) bool {
 	case *ast.CallExpr:
 		g.InspectCallExpr(x)
 
-	default:
-		print()
 	}
 
 	return true

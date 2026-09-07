@@ -183,8 +183,6 @@ func (mo *Mo) Parse(buf []byte) {
 		MsgIDCount   uint32
 		MsgIDOffset  uint32
 		MsgStrOffset uint32
-		HashSize     uint32
-		HashOffset   uint32
 	}
 
 	bufLen := uint64(len(buf))
@@ -193,8 +191,6 @@ func (mo *Mo) Parse(buf []byte) {
 	header.MsgIDCount = bo.Uint32(buf[8:12])
 	header.MsgIDOffset = bo.Uint32(buf[12:16])
 	header.MsgStrOffset = bo.Uint32(buf[16:20])
-	header.HashSize = bo.Uint32(buf[20:24])
-	header.HashOffset = bo.Uint32(buf[24:28])
 
 	if header.MajorVersion != 0 && header.MajorVersion != 1 {
 		return

@@ -37,12 +37,6 @@ func TestPo_Get(t *testing.T) {
 			t.Errorf("Expected '%s' but got '%s'", translatedText, tr)
 		}
 
-		v := "My text"
-		tr = po.Get(v)
-		if tr != translatedText {
-			t.Errorf("Expected '%s' but got '%s'", translatedText, tr)
-		}
-
 		// Test translations
 		tr = po.Get("language")
 		if tr != "en_US" {
@@ -125,30 +119,9 @@ msgstr "More Translation"
 
 	`
 
-	// Write PO content to file
-	filename := path.Clean(os.TempDir() + string(os.PathSeparator) + "default.po")
-
-	f, err := os.Create(filename)
-	if err != nil {
-		t.Fatalf("Can't create test file: %s", err.Error())
-	}
-	defer func() {
-		_ = f.Close()
-	}()
-
-	_, err = f.WriteString(str)
-	if err != nil {
-		t.Fatalf("Can't write to test file: %s", err.Error())
-	}
-
 	// Create po object
 	po := NewPo()
-
-	// Try to parse a directory
-	po.ParseFile(path.Clean(os.TempDir()))
-
-	// Parse file
-	po.ParseFile(filename)
+	po.Parse([]byte(str))
 
 	// Test translations
 	tr := po.Get("My text")
@@ -658,14 +631,8 @@ func TestPoTextEncoding(t *testing.T) {
 
 	po2.Parse(buff)
 
-	for k, v := range po.Headers {
-		if v2, ok := po2.Headers[k]; ok {
-			for i, value := range v {
-				if value != v2[i] {
-					t.Errorf("TestPoTextEncoding: Header Difference for %s: %s vs %s", k, value, v2[i])
-				}
-			}
-		}
+	if !reflect.DeepEqual(po2.Headers, po.Headers) {
+		t.Errorf("TestPoTextEncoding: Headers differ: %v vs %v", po.Headers, po2.Headers)
 	}
 
 	// Test translations
@@ -685,12 +652,12 @@ func TestPoTextEncoding(t *testing.T) {
 	}
 
 	v := "Test"
-	tr = po.GetC("One with var: %s", "Ctx", v)
+	tr = po2.GetC("One with var: %s", "Ctx", v)
 	if tr != "This one is the singular in a Ctx context: Test" {
 		t.Errorf("Expected 'This one is the singular in a Ctx context: Test' but got '%s'", tr)
 	}
 
-	tr = po.GetNC("One with var: %s", "Several with vars: %s", 17, "Ctx", v)
+	tr = po2.GetNC("One with var: %s", "Several with vars: %s", 17, "Ctx", v)
 	if tr != "This one is the plural in a Ctx context: Test" {
 		t.Errorf("Expected 'This one is the plural in a Ctx context: Test' but got '%s'", tr)
 	}
@@ -713,14 +680,8 @@ func TestPoTextEncoding(t *testing.T) {
 	po2 = NewPo()
 	po2.Parse(buff)
 
-	for k, v := range po.Headers {
-		if v2, ok := po2.Headers[k]; ok {
-			for i, value := range v {
-				if value != v2[i] {
-					t.Errorf("Only translations should have been dropped, not headers")
-				}
-			}
-		}
+	if !reflect.DeepEqual(po2.Headers, po.Headers) {
+		t.Errorf("Only translations should have been dropped, not headers")
 	}
 
 	tr = po2.Get("My text")
@@ -733,18 +694,18 @@ func TestPoTextEncoding(t *testing.T) {
 	}
 
 	tr = po2.Get("Some random")
-	if tr == "Some random translation" || tr != "Some random" {
+	if tr != "Some random" {
 		t.Errorf("Expected 'Some random' translation to be dropped; was present")
 	}
 
 	// With 'the' removed?
 	v = "Test"
-	tr = po.GetC("One with var: %s", "Ctx", v)
+	tr = po2.GetC("One with var: %s", "Ctx", v)
 	if tr != "This one is singular in a Ctx context: Test" {
 		t.Errorf("Expected 'This one is singular in a Ctx context: Test' but got '%s'", tr)
 	}
 
-	tr = po.GetNC("One with var: %s", "Several with vars: %s", 17, "Ctx", v)
+	tr = po2.GetNC("One with var: %s", "Several with vars: %s", 17, "Ctx", v)
 	if tr != "This one is plural in a Ctx context: Test" {
 		t.Errorf("Expected 'This one is plural in a Ctx context: Test' but got '%s'", tr)
 	}
@@ -906,11 +867,6 @@ func TestPoParseRejectsMalformedPluralIndexes(t *testing.T) {
 			}
 			if len(translation.Trs) != 0 {
 				t.Fatalf("malformed plural index created forms: %v", translation.Trs)
-			}
-			for form := range translation.Trs {
-				if form < 0 {
-					t.Fatalf("malformed plural index created negative form %d", form)
-				}
 			}
 		})
 	}

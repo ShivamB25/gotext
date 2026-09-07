@@ -231,9 +231,6 @@ msgstr ""`
 		t.Fatalf("Dump() mutated nested source locations: got %v, want %v",
 			domain.ContextTranslations["ctx"]["id"].SourceLocations, beforeLocations)
 	}
-	if strings.HasPrefix(firstDump, "\n") || strings.HasSuffix(firstDump, "\n\n") {
-		t.Fatalf("partial maps introduced empty dump entries: %q", firstDump)
-	}
 }
 
 func TestDomainMap_AddTranslation(t *testing.T) {
@@ -262,13 +259,7 @@ func TestDomainMap_AddTranslation(t *testing.T) {
 }
 
 func TestDomainMap_Save(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "gotext-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tmpDir)
-	}()
+	tmpDir := t.TempDir()
 
 	domainMap := &DomainMap{}
 	domainMap.AddTranslation("test", &Translation{

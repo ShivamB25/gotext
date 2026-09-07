@@ -6,9 +6,7 @@
 package gotext
 
 import (
-	"bytes"
 	"embed"
-	"encoding/gob"
 	"errors"
 	"maps"
 	"os"
@@ -1223,19 +1221,13 @@ func TestLocaleBinaryEncodingKeepsStateOnDomainDecodeError(t *testing.T) {
 	locale.AddTranslator("old", oldTranslator)
 	locale.SetDomain("old")
 
-	var buff bytes.Buffer
-	encoder := gob.NewEncoder(&buff)
-	err := encoder.Encode(&LocaleEncoding{
+	data := encodeTestGob(t, &LocaleEncoding{
 		Path:          "new/path",
 		Lang:          "new",
 		Domains:       map[string][]byte{"new": []byte("invalid")},
 		DefaultDomain: "new",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := locale.UnmarshalBinary(buff.Bytes()); err == nil {
+	if err := locale.UnmarshalBinary(data); err == nil {
 		t.Fatal("UnmarshalBinary returned nil for an invalid domain")
 	}
 

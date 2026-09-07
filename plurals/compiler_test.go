@@ -35,7 +35,6 @@ func TestCompiler(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, data := range fixtures {
-		data := data
 		t.Run(data.PluralForm, func(t *testing.T) {
 			expr, err := Compile(data.PluralForm)
 			if err != nil {
@@ -88,7 +87,6 @@ func TestCompileEvalGNUExpressions(t *testing.T) {
 		{name: "nested false arm", expr: "n == 0 ? 0 : n == 1 ? 1 : 2", n: 2, want: 2},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			expr, err := Compile(tt.expr)
 			if err != nil {
@@ -173,7 +171,6 @@ func TestCompileEvalPrecedenceAndParentheses(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			expr, err := Compile(tt.expr)
 			if err != nil {
@@ -224,7 +221,6 @@ func TestCompileEvalLogicalShortCircuitCases(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			expr, err := Compile(tt.expr)
 			if err != nil {
@@ -246,7 +242,6 @@ func TestCompileEvalLogicalShortCircuitCases(t *testing.T) {
 
 func TestCompileEvalWhitespaceAndUint32Boundaries(t *testing.T) {
 	for _, input := range []string{" 0 ", "\t0\n", "\u20030\u2003"} {
-		input := input
 		t.Run("constant whitespace", func(t *testing.T) {
 			expr, err := Compile(input)
 			if err != nil {
@@ -280,7 +275,6 @@ func TestCompileEvalWhitespaceAndUint32Boundaries(t *testing.T) {
 		{name: "maximum modulo remainder", expr: "n % " + maxLiteral + " == 0", n: maxUint32, want: 1},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			expr, err := Compile(tt.expr)
 			if err != nil {
@@ -381,7 +375,6 @@ func TestCompileMalformedExpressionsReturnNil(t *testing.T) {
 		{name: "result literal overflow", expr: "n == 1 ? " + aboveMaxInt + " : 0"},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() {
 				if recovered := recover(); recovered != nil {

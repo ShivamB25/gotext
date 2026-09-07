@@ -96,10 +96,6 @@ func (constValStruct) compile(tokens []string) (expr Expression, err error) {
 	return constValue{value: i}, nil
 }
 
-func compileLogicTest(tokens []string, sep string, builder logicTestBuild) (test test, err error) {
-	return compileLogicTestDepth(tokens, sep, builder, 0)
-}
-
 func compileLogicTestDepth(tokens []string, sep string, builder logicTestBuild, depth int) (test test, err error) {
 	if depth > maxParseDepth {
 		return nil, errors.New("expression nesting is too deep")
@@ -119,24 +115,10 @@ func compileLogicTestDepth(tokens []string, sep string, builder logicTestBuild, 
 	return builder(left, right), nil
 }
 
-var orToken orStruct
-
-type orStruct struct{}
-
-func (orStruct) compile(tokens []string) (test test, err error) {
-	return compileLogicTest(tokens, "||", buildOr)
-}
 func buildOr(left test, right test) test {
 	return or{left: left, right: right}
 }
 
-var andToken andStruct
-
-type andStruct struct{}
-
-func (andStruct) compile(tokens []string) (test test, err error) {
-	return compileLogicTest(tokens, "&&", buildAnd)
-}
 func buildAnd(left test, right test) test {
 	return and{left: left, right: right}
 }
@@ -328,8 +310,8 @@ type testTokenDef struct {
 }
 
 var precedence = []testTokenDef{
-	{op: "||", token: orToken},
-	{op: "&&", token: andToken},
+	{op: "||"},
+	{op: "&&"},
 	{op: "==", token: eqToken},
 	{op: "!=", token: neqToken},
 	{op: ">=", token: gteToken},
@@ -542,14 +524,10 @@ func Compile(s string) (expr Expression, err error) {
 	if !strings.Contains(s, "?") {
 		s += "?1:0"
 	}
-	return compileExpression(s)
-}
-
-// Compiles an expression (ternary or constant)
-func compileExpression(s string) (expr Expression, err error) {
 	return compileExpressionDepth(s, 0)
 }
 
+// Compiles an expression (ternary or constant)
 func compileExpressionDepth(s string, depth int) (expr Expression, err error) {
 	if depth > maxParseDepth {
 		return nil, errors.New("expression nesting is too deep")

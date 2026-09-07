@@ -23,8 +23,6 @@ multiple languages at the same time by working with this object.
 Example:
 
 	    import (
-		"encoding/gob"
-		"bytes"
 		    "fmt"
 		    "github.com/leonelquinteros/gotext"
 	    )
@@ -199,7 +197,6 @@ func (l *Locale) AddDomain(dom string) {
 			// Parse file.
 			poObj.ParseFile(file)
 		} else {
-			// fallback return if no file found with
 			return
 		}
 	}
@@ -321,7 +318,7 @@ func (l *Locale) GetND(dom, str, plural string, n int, vars ...any) string {
 		return translator.GetN(str, plural, n, vars...)
 	}
 
-	// Use western default rule (plural > 1) to handle missing domain default result.
+	// Use western default rule (n != 1) to handle missing domain default result.
 	if n == 1 {
 		return FormatString(str, vars...)
 	}
@@ -359,7 +356,7 @@ func (l *Locale) GetNDC(dom, str, plural string, n int, ctx string, vars ...any)
 		return translator.GetNC(str, plural, n, ctx, vars...)
 	}
 
-	// Use western default rule (plural > 1) to handle missing domain default result.
+	// Use western default rule (n != 1) to handle missing domain default result.
 	if n == 1 {
 		return FormatString(str, vars...)
 	}
