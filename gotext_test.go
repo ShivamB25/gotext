@@ -248,22 +248,33 @@ func preserveGlobalConfig(t *testing.T) {
 	})
 }
 
+const frenchMenuCatalog = `msgid ""
+msgstr ""
+
+msgid "hello"
+msgstr "bonjour"
+
+msgctxt "menu"
+msgid "hello"
+msgstr "bonjour menu"
+`
+
+func writeTestCatalog(t *testing.T, library, language, domain, contents string) {
+	t.Helper()
+	dir := filepath.Join(library, language, "LC_MESSAGES")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create catalog directory: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, domain+".po"), []byte(contents), 0o644); err != nil {
+		t.Fatalf("write catalog: %v", err)
+	}
+}
+
 func TestGlobalIsTranslatedSearchesLaterLocales(t *testing.T) {
 	preserveGlobalConfig(t)
 
 	library := t.TempDir()
-	writeCatalog := func(language, contents string) {
-		t.Helper()
-		dir := filepath.Join(library, language, "LC_MESSAGES")
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			t.Fatalf("create catalog directory: %v", err)
-		}
-		if err := os.WriteFile(filepath.Join(dir, "default.po"), []byte(contents), 0o644); err != nil {
-			t.Fatalf("write catalog: %v", err)
-		}
-	}
-
-	writeCatalog("en_US", `msgid ""
+	writeTestCatalog(t, library, "en_US", "default", `msgid ""
 msgstr ""
 "Language: en_US\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -275,7 +286,7 @@ msgctxt "context"
 msgid "hello"
 msgstr ""
 `)
-	writeCatalog("fr", `msgid ""
+	writeTestCatalog(t, library, "fr", "default", `msgid ""
 msgstr ""
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -322,22 +333,7 @@ func TestGlobalIsTranslatedUsesConfiguredAndActualLanguage(t *testing.T) {
 	preserveGlobalConfig(t)
 
 	library := t.TempDir()
-	catalogDir := filepath.Join(library, "fr", "LC_MESSAGES")
-	if err := os.MkdirAll(catalogDir, 0o755); err != nil {
-		t.Fatalf("create catalog directory: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(catalogDir, "default.po"), []byte(`msgid ""
-msgstr ""
-
-msgid "hello"
-msgstr "bonjour"
-
-msgctxt "menu"
-msgid "hello"
-msgstr "bonjour menu"
-`), 0o644); err != nil {
-		t.Fatalf("write catalog: %v", err)
-	}
+	writeTestCatalog(t, library, "fr", "default", frenchMenuCatalog)
 
 	Configure(library, "fr_FR", "default")
 	if got := Get("hello"); got != "bonjour" {
@@ -411,22 +407,7 @@ func TestGlobalIsTranslatedLoadsColdNondefaultDomains(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			library := t.TempDir()
-			catalogDir := filepath.Join(library, "fr", "LC_MESSAGES")
-			if err := os.MkdirAll(catalogDir, 0o755); err != nil {
-				t.Fatalf("create catalog directory: %v", err)
-			}
-			if err := os.WriteFile(filepath.Join(catalogDir, "extra.po"), []byte(`msgid ""
-msgstr ""
-
-msgid "hello"
-msgstr "bonjour"
-
-msgctxt "menu"
-msgid "hello"
-msgstr "bonjour menu"
-`), 0o644); err != nil {
-				t.Fatalf("write catalog: %v", err)
-			}
+			writeTestCatalog(t, library, "fr", "extra", frenchMenuCatalog)
 
 			Configure(library, "fr", "default")
 			if tt.contextual {
@@ -957,18 +938,9 @@ func TestGotext_MissingWrappers(t *testing.T) {
 	}
 }
 func TestGlobalEmptyLocaleStorageIsSafe(t *testing.T) {
-	previousLocales := GetLocales()
-	previousLanguages := GetLanguages()
+	preserveGlobalConfig(t)
 	previousLibrary := GetLibrary()
 	previousDomain := GetDomain()
-	defer func() {
-		globalConfig.Lock()
-		globalConfig.locales = append(make([]*Locale, 0, len(previousLocales)), previousLocales...)
-		globalConfig.languages = append(make([]string, 0, len(previousLanguages)), previousLanguages...)
-		globalConfig.library = previousLibrary
-		globalConfig.domain = previousDomain
-		globalConfig.Unlock()
-	}()
 
 	tests := []struct {
 		name   string
@@ -1023,18 +995,7 @@ func TestGlobalEmptyLocaleStorageIsSafe(t *testing.T) {
 }
 
 func TestSetLocalesCopiesCallerSlices(t *testing.T) {
-	previousLocales := GetLocales()
-	previousLanguages := GetLanguages()
-	previousLibrary := GetLibrary()
-	previousDomain := GetDomain()
-	defer func() {
-		globalConfig.Lock()
-		globalConfig.locales = append(make([]*Locale, 0, len(previousLocales)), previousLocales...)
-		globalConfig.languages = append(make([]string, 0, len(previousLanguages)), previousLanguages...)
-		globalConfig.library = previousLibrary
-		globalConfig.domain = previousDomain
-		globalConfig.Unlock()
-	}()
+	preserveGlobalConfig(t)
 
 	locale := NewLocale("caller-path", "caller")
 	locale.SetDomain("caller-domain")
@@ -1060,20 +1021,7 @@ func TestSetLocalesCopiesCallerSlices(t *testing.T) {
 }
 
 func TestConcurrentSetDomainKeepsGlobalAndLocaleDomainsInSync(t *testing.T) {
-	globalConfig.RLock()
-	previousLocales := append(make([]*Locale, 0, len(globalConfig.locales)), globalConfig.locales...)
-	previousLanguages := append(make([]string, 0, len(globalConfig.languages)), globalConfig.languages...)
-	previousLibrary := globalConfig.library
-	previousDomain := globalConfig.domain
-	globalConfig.RUnlock()
-	defer func() {
-		globalConfig.Lock()
-		globalConfig.locales = previousLocales
-		globalConfig.languages = previousLanguages
-		globalConfig.library = previousLibrary
-		globalConfig.domain = previousDomain
-		globalConfig.Unlock()
-	}()
+	preserveGlobalConfig(t)
 
 	SetLocales([]*Locale{
 		NewLocale("", "en_US"),
