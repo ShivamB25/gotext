@@ -59,7 +59,7 @@ EOL`, "multline\nending with EOL\n", "type alias", "locale constructor call",
 	if plural := data.Domains[defaultDomain].Translations["singular from a constant"]; plural == nil || plural.MsgIDPlural != "plural from a constant" {
 		t.Error("constant plural strings were not extracted")
 	}
-	if _, ok := data.Domains[defaultDomain].ContextTranslations[`"constant context"`]["message with a constant context"]; !ok {
+	if _, ok := data.Domains[defaultDomain].ContextTranslations["constant context"]["message with a constant context"]; !ok {
 		t.Error("constant context and message were not extracted")
 	}
 	if _, ok := data.Domains[defaultDomain].Translations["message before mutation"]; ok {
